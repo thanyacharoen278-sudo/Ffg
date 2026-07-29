@@ -1,0 +1,146 @@
+-- DEKUz Toggle System (Blue UI)
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- สถานะเปิด/ปิด
+local isEnabled = false
+local connection = nil
+
+-- ========== สร้าง UI ==========
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "DEKUzUI"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Parent = playerGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 160, 0, 50)
+mainFrame.Position = UDim2.new(0.5, -80, 0.15, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 30, 60)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 10)
+corner.Parent = mainFrame
+
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(0, 170, 255)
+stroke.Thickness = 2
+stroke.Parent = mainFrame
+
+local title = Instance.new("TextLabel")
+title.Name = "Title"
+title.Size = UDim2.new(1, 0, 0, 20)
+title.Position = UDim2.new(0, 0, 0, 2)
+title.BackgroundTransparency = 1
+title.Text = "DEKUz"
+title.TextColor3 = Color3.fromRGB(0, 200, 255)
+title.TextSize = 14
+title.Font = Enum.Font.GothamBold
+title.Parent = mainFrame
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Name = "ToggleButton"
+toggleBtn.Size = UDim2.new(0.85, 0, 0, 22)
+toggleBtn.Position = UDim2.new(0.075, 0, 0.52, 0)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 180)
+toggleBtn.Text = "OFF"
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.TextSize = 13
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.Parent = mainFrame
+
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 6)
+btnCorner.Parent = toggleBtn
+
+-- ========== ฟังก์ชันหลัก ==========
+local function registerAttack()
+    local args = {
+        0.6499999761581421
+    }
+    ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RE/RegisterAttack"):FireServer(unpack(args))
+end
+
+local function getFish()
+    local args = {
+        "getFish"
+    }
+    ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
+end
+
+local function registerHit()
+    local args = {
+        Instance.new("MeshPart", nil),
+        {},
+        [4] = "069a8889"
+    }
+    ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RE/RegisterHit"):FireServer(unpack(args))
+end
+
+local function startLoop()
+    if connection then return end
+    connection = game:GetService("RunService").Heartbeat:Connect(function()
+        if not isEnabled then return end
+        pcall(registerAttack)
+        pcall(getFish)
+        pcall(registerHit)
+        task.wait(0.1) 
+    end)
+end
+
+local function stopLoop()
+    if connection then
+        connection:Disconnect()
+        connection = nil
+    end
+end
+
+-- ========== ปุ่มเปิด/ปิด ==========
+toggleBtn.MouseButton1Click:Connect(function()
+    isEnabled = not isEnabled
+    
+    if isEnabled then
+        toggleBtn.Text = "ON"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
+        startLoop()
+    else
+        toggleBtn.Text = "OFF"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 180)
+        stopLoop()
+    end
+end)
+
+-- ลาก UI ได้
+local dragging = false
+local dragStart, startPos
+
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+    end
+end)
+
+mainFrame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+print("DEKUz System Loaded | Toggle ON/OFF")
