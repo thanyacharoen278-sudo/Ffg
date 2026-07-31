@@ -1,0 +1,670 @@
+--[[ DEKUz X | ไทย + PvP | Delta ]]
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local VU = game:GetService("VirtualUser")
+local VIM = game:GetService("VirtualInputManager")
+local RS = game:GetService("ReplicatedStorage")
+local LP = Players.LocalPlayer
+
+repeat task.wait() until game:IsLoaded()
+local pg = LP:WaitForChild("PlayerGui")
+
+pcall(function()
+    if pg:FindFirstChild("DEKUzHub") then pg.DEKUzHub:Destroy() end
+    if pg:FindFirstChild("DEKUzOpen") then pg.DEKUzOpen:Destroy() end
+end)
+
+_G.FastAttack = false
+_G.AutoFarm = false
+_G.AutoRaid = false
+_G.BringMob = true
+_G.PvPHead = false
+_G.Speed = false
+_G.Fly = false
+_G.AntiAFK = true
+_G.FruitESP = false
+_G.BringFruit = false
+_G.Noclip = false
+_G.WalkSpeed = 140
+_G.FarmHeight = 14
+_G.PvPHeight = 12
+
+local function HRP()
+    local c = LP.Character
+    return c and c:FindFirstChild("HumanoidRootPart")
+end
+local function Hum()
+    local c = LP.Character
+    return c and c:FindFirstChildOfClass("Humanoid")
+end
+
+-- สี
+local BG = Color3.fromRGB(8, 10, 18)
+local PANEL = Color3.fromRGB(14, 18, 32)
+local CARD = Color3.fromRGB(22, 28, 48)
+local ACCENT = Color3.fromRGB(80, 140, 255)
+local TEXT = Color3.fromRGB(235, 240, 255)
+local DIM = Color3.fromRGB(140, 150, 180)
+local ON = Color3.fromRGB(60, 220, 140)
+local OFF = Color3.fromRGB(45, 52, 75)
+local RED = Color3.fromRGB(220, 70, 90)
+
+-- UI
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "DEKUzHub"
+Gui.ResetOnSpawn = false
+Gui.Parent = pg
+
+local Main = Instance.new("Frame")
+Main.Size = UDim2.new(0, 400, 0, 420)
+Main.Position = UDim2.new(0.5, -200, 0.5, -210)
+Main.BackgroundColor3 = BG
+Main.BorderSizePixel = 0
+Main.Parent = Gui
+local mc = Instance.new("UICorner")
+mc.CornerRadius = UDim.new(0, 14)
+mc.Parent = Main
+
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 48)
+Header.BackgroundColor3 = PANEL
+Header.BorderSizePixel = 0
+Header.Parent = Main
+local hc = Instance.new("UICorner")
+hc.CornerRadius = UDim.new(0, 14)
+hc.Parent = Header
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -50, 1, 0)
+Title.Position = UDim2.new(0, 14, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "DEKUz X  |  ฮับ"
+Title.TextColor3 = TEXT
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 15
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = Header
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 28, 0, 28)
+CloseBtn.Position = UDim2.new(1, -36, 0, 10)
+CloseBtn.BackgroundColor3 = RED
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.new(1, 1, 1)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 14
+CloseBtn.BorderSizePixel = 0
+CloseBtn.Parent = Header
+local cc = Instance.new("UICorner")
+cc.CornerRadius = UDim.new(0, 8)
+cc.Parent = CloseBtn
+
+-- ลาก
+local dragging, dStart, mPos = false, nil, nil
+Header.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dStart = i.Position
+        mPos = Main.Position
+    end
+end)
+Header.InputEnded:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+UIS.InputChanged:Connect(function(i)
+    if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+        local d = i.Position - dStart
+        Main.Position = UDim2.new(mPos.X.Scale, mPos.X.Offset + d.X, mPos.Y.Scale, mPos.Y.Offset + d.Y)
+    end
+end)
+
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size = UDim2.new(1, -16, 1, -60)
+Scroll.Position = UDim2.new(0, 8, 0, 54)
+Scroll.BackgroundColor3 = PANEL
+Scroll.BorderSizePixel = 0
+Scroll.ScrollBarThickness = 4
+Scroll.CanvasSize = UDim2.new(0, 0, 0, 900)
+Scroll.Parent = Main
+local sc = Instance.new("UICorner")
+sc.CornerRadius = UDim.new(0, 10)
+sc.Parent = Scroll
+
+local Lay = Instance.new("UIListLayout")
+Lay.Padding = UDim.new(0, 6)
+Lay.SortOrder = Enum.SortOrder.LayoutOrder
+Lay.Parent = Scroll
+local Pad = Instance.new("UIPadding")
+Pad.PaddingTop = UDim.new(0, 8)
+Pad.PaddingLeft = UDim.new(0, 8)
+Pad.PaddingRight = UDim.new(0, 8)
+Pad.PaddingBottom = UDim.new(0, 10)
+Pad.Parent = Scroll
+Lay:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, Lay.AbsoluteContentSize.Y + 20)
+end)
+
+local ord = 0
+local function addLabel(text)
+    ord = ord + 1
+    local l = Instance.new("TextLabel")
+    l.Size = UDim2.new(1, -8, 0, 20)
+    l.BackgroundTransparency = 1
+    l.Text = text
+    l.TextColor3 = ACCENT
+    l.Font = Enum.Font.GothamBold
+    l.TextSize = 13
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.LayoutOrder = ord
+    l.Parent = Scroll
+end
+
+local function addToggle(name, default, flag)
+    ord = ord + 1
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1, -8, 0, 34)
+    row.BackgroundColor3 = CARD
+    row.BorderSizePixel = 0
+    row.LayoutOrder = ord
+    row.Parent = Scroll
+    local rc = Instance.new("UICorner")
+    rc.CornerRadius = UDim.new(0, 8)
+    rc.Parent = row
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -70, 1, 0)
+    lbl.Position = UDim2.new(0, 10, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = name
+    lbl.TextColor3 = TEXT
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 12
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = row
+
+    local on = default
+    _G[flag] = default
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 48, 0, 22)
+    btn.Position = UDim2.new(1, -56, 0.5, -11)
+    btn.BackgroundColor3 = on and ON or OFF
+    btn.Text = on and "เปิด" or "ปิด"
+    btn.TextColor3 = TEXT
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 11
+    btn.BorderSizePixel = 0
+    btn.Parent = row
+    local bc = Instance.new("UICorner")
+    bc.CornerRadius = UDim.new(0, 8)
+    bc.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        on = not on
+        _G[flag] = on
+        btn.BackgroundColor3 = on and ON or OFF
+        btn.Text = on and "เปิด" or "ปิด"
+    end)
+end
+
+local function addSlider(name, default, minV, maxV, flag)
+    ord = ord + 1
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1, -8, 0, 50)
+    row.BackgroundColor3 = CARD
+    row.BorderSizePixel = 0
+    row.LayoutOrder = ord
+    row.Parent = Scroll
+    local rc = Instance.new("UICorner")
+    rc.CornerRadius = UDim.new(0, 8)
+    rc.Parent = row
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -16, 0, 20)
+    lbl.Position = UDim2.new(0, 10, 0, 4)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = name .. ": " .. tostring(default)
+    lbl.TextColor3 = TEXT
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 12
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = row
+
+    local bar = Instance.new("Frame")
+    bar.Size = UDim2.new(1, -20, 0, 8)
+    bar.Position = UDim2.new(0, 10, 0, 32)
+    bar.BackgroundColor3 = OFF
+    bar.BorderSizePixel = 0
+    bar.Parent = row
+    local bc = Instance.new("UICorner")
+    bc.CornerRadius = UDim.new(0, 4)
+    bc.Parent = bar
+
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new((default - minV) / (maxV - minV), 0, 1, 0)
+    fill.BackgroundColor3 = ACCENT
+    fill.BorderSizePixel = 0
+    fill.Parent = bar
+    local fc = Instance.new("UICorner")
+    fc.CornerRadius = UDim.new(0, 4)
+    fc.Parent = fill
+
+    _G[flag] = default
+    local sliding = false
+    bar.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            sliding = true
+        end
+    end)
+    UIS.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            sliding = false
+        end
+    end)
+    UIS.InputChanged:Connect(function(i)
+        if sliding and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+            local rel = math.clamp((i.Position.X - bar.AbsolutePosition.X) / math.max(bar.AbsoluteSize.X, 1), 0, 1)
+            local val = math.floor(minV + (maxV - minV) * rel)
+            fill.Size = UDim2.new(rel, 0, 1, 0)
+            lbl.Text = name .. ": " .. tostring(val)
+            _G[flag] = val
+        end
+    end)
+end
+
+addLabel("--- การต่อสู้ ---")
+addToggle("ตีเร็ว", false, "FastAttack")
+addToggle("ฟาร์มอัตโนมัติ (บนหัวมอน)", false, "AutoFarm")
+addToggle("เรดอัตโนมัติ", false, "AutoRaid")
+addToggle("รวบมอน", true, "BringMob")
+addSlider("ความสูงเหนือมอน", 14, 8, 25, "FarmHeight")
+
+addLabel("--- PvP ---")
+addToggle("บินบนหัวผู้เล่น", false, "PvPHead")
+addSlider("ความสูงเหนือผู้เล่น", 12, 6, 30, "PvPHeight")
+
+addLabel("--- เคลื่อนที่ ---")
+addToggle("เพิ่มความเร็ว", false, "Speed")
+addSlider("ความเร็วเดิน", 140, 16, 280, "WalkSpeed")
+addToggle("บินอิสระ", false, "Fly")
+addToggle("ทะลุกำแพง", false, "Noclip")
+addToggle("กันเตะ AFK", true, "AntiAFK")
+
+addLabel("--- ผล ---")
+addToggle("แสดงผล ESP", false, "FruitESP")
+addToggle("ดึงผลมาที่ตัว", false, "BringFruit")
+
+-- ปุ่มเปิดกลับ
+local OpenGui = Instance.new("ScreenGui")
+OpenGui.Name = "DEKUzOpen"
+OpenGui.ResetOnSpawn = false
+OpenGui.Parent = pg
+local OpenBtn = Instance.new("TextButton")
+OpenBtn.Size = UDim2.new(0, 120, 0, 34)
+OpenBtn.Position = UDim2.new(0, 12, 0.5, -17)
+OpenBtn.BackgroundColor3 = ACCENT
+OpenBtn.Text = "เปิด DEKUz"
+OpenBtn.TextColor3 = TEXT
+OpenBtn.Font = Enum.Font.GothamBold
+OpenBtn.TextSize = 12
+OpenBtn.Visible = false
+OpenBtn.BorderSizePixel = 0
+OpenBtn.Parent = OpenGui
+local oc = Instance.new("UICorner")
+oc.CornerRadius = UDim.new(0, 8)
+oc.Parent = OpenBtn
+
+CloseBtn.MouseButton1Click:Connect(function()
+    Main.Visible = false
+    OpenBtn.Visible = true
+end)
+OpenBtn.MouseButton1Click:Connect(function()
+    Main.Visible = true
+    OpenBtn.Visible = false
+end)
+UIS.InputBegan:Connect(function(i, g)
+    if g then return end
+    if i.KeyCode == Enum.KeyCode.RightControl then
+        Main.Visible = not Main.Visible
+        OpenBtn.Visible = not Main.Visible
+    end
+end)
+
+print("[DEKUz] UI พร้อม")
+
+-- ===== ระบบ =====
+local function Equip()
+    pcall(function()
+        local c = LP.Character
+        if not c then return end
+        for _, t in pairs(c:GetChildren()) do
+            if t:IsA("Tool") then return end
+        end
+        local bag = LP:FindFirstChild("Backpack")
+        if not bag then return end
+        for _, t in pairs(bag:GetChildren()) do
+            if t:IsA("Tool") then
+                local h = Hum()
+                if h then h:EquipTool(t) end
+                return
+            end
+        end
+    end)
+end
+
+local AC = nil
+spawn(function()
+    pcall(function()
+        local ok, cf = pcall(function()
+            return require(LP.PlayerScripts:WaitForChild("CombatFramework", 2))
+        end)
+        if ok then AC = cf end
+    end)
+end)
+
+local function Attack()
+    Equip()
+    pcall(function()
+        if AC and AC.activeController then
+            local c = AC.activeController
+            c.timeToNextAttack = 0
+            c.hitboxMagnitude = 90
+        end
+    end)
+    pcall(function()
+        VU:CaptureController()
+        VU:Button1Down(Vector2.new(0, 0))
+    end)
+    task.wait(0.03)
+    pcall(function()
+        VU:Button1Up(Vector2.new(0, 0))
+    end)
+    pcall(function()
+        local cam = workspace.CurrentCamera
+        local x = 400
+        local y = 300
+        if cam then
+            x = cam.ViewportSize.X / 2
+            y = cam.ViewportSize.Y / 2
+        end
+        VIM:SendMouseButtonEvent(x, y, 0, true, game, 1)
+        task.wait(0.015)
+        VIM:SendMouseButtonEvent(x, y, 0, false, game, 1)
+    end)
+    pcall(function()
+        local c = LP.Character
+        if c then
+            local t = c:FindFirstChildOfClass("Tool")
+            if t then t:Activate() end
+        end
+    end)
+end
+
+local function GetEnemy(range)
+    local h = HRP()
+    if not h then return nil end
+    local near, best = nil, range or 5000
+    local folder = workspace:FindFirstChild("Enemies")
+    if not folder then return nil end
+    for _, m in pairs(folder:GetChildren()) do
+        local mh = m:FindFirstChild("HumanoidRootPart")
+        local hum = m:FindFirstChildOfClass("Humanoid")
+        if mh and hum and hum.Health > 0 and not Players:GetPlayerFromCharacter(m) then
+            local d = (h.Position - mh.Position).Magnitude
+            if d < best then
+                near = m
+                best = d
+            end
+        end
+    end
+    return near
+end
+
+local function GetFarEnemy(minD)
+    local h = HRP()
+    if not h then return nil end
+    local best, bestD = nil, math.huge
+    local folder = workspace:FindFirstChild("Enemies")
+    if not folder then return nil end
+    for _, m in pairs(folder:GetChildren()) do
+        local mh = m:FindFirstChild("HumanoidRootPart")
+        local hum = m:FindFirstChildOfClass("Humanoid")
+        if mh and hum and hum.Health > 0 and not Players:GetPlayerFromCharacter(m) then
+            local d = (h.Position - mh.Position).Magnitude
+            if d > (minD or 50) and d < bestD then
+                best = m
+                bestD = d
+            end
+        end
+    end
+    return best
+end
+
+local function GetNearestPlayer()
+    local h = HRP()
+    if not h then return nil end
+    local near, best = nil, 2500
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr \~= LP and plr.Character then
+            local mh = plr.Character:FindFirstChild("HumanoidRootPart")
+            local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+            if mh and hum and hum.Health > 0 then
+                local d = (h.Position - mh.Position).Magnitude
+                if d < best then
+                    near = mh
+                    best = d
+                end
+            end
+        end
+    end
+    return near
+end
+
+local function BringMobs(pos)
+    if not _G.BringMob then return end
+    pcall(function()
+        local folder = workspace:FindFirstChild("Enemies")
+        if not folder then return end
+        for _, m in pairs(folder:GetChildren()) do
+            local mh = m:FindFirstChild("HumanoidRootPart")
+            local hum = m:FindFirstChildOfClass("Humanoid")
+            if mh and hum and hum.Health > 0 then
+                local d = (mh.Position - pos).Magnitude
+                if d < 280 and d > 6 then
+                    mh.CFrame = CFrame.new(pos + Vector3.new(math.random(-3, 3), 0, math.random(-3, 3)))
+                    mh.CanCollide = false
+                end
+            end
+        end
+    end)
+end
+
+-- คลิกรัว
+spawn(function()
+    while true do
+        if _G.FastAttack or _G.AutoFarm or _G.AutoRaid or _G.PvPHead then
+            Attack()
+            task.wait(0.05)
+        else
+            task.wait(0.2)
+        end
+    end
+end)
+
+-- ฟาร์ม
+RunService.Heartbeat:Connect(function()
+    if not _G.AutoFarm or _G.PvPHead then return end
+    pcall(function()
+        local h = HRP()
+        if not h then return end
+        local e = GetEnemy(5000)
+        if not e then return end
+        local eh = e:FindFirstChild("HumanoidRootPart")
+        if not eh then return end
+        local height = _G.FarmHeight or 14
+        h.CFrame = CFrame.new(eh.Position + Vector3.new(0, height, 0), eh.Position)
+        h.Velocity = Vector3.new(0, 0, 0)
+        BringMobs(eh.Position)
+    end)
+end)
+
+-- PvP บนหัวผู้เล่น
+RunService.Heartbeat:Connect(function()
+    if not _G.PvPHead then return end
+    pcall(function()
+        local h = HRP()
+        if not h then return end
+        local t = GetNearestPlayer()
+        if not t then return end
+        local height = _G.PvPHeight or 12
+        h.CFrame = CFrame.new(t.Position + Vector3.new(0, height, 0), t.Position)
+        h.Velocity = Vector3.new(0, 0, 0)
+    end)
+end)
+
+-- เรด
+spawn(function()
+    while true do
+        task.wait(0.12)
+        if _G.AutoRaid and not _G.PvPHead then
+            pcall(function()
+                local h = HRP()
+                if not h then return end
+                local near = GetEnemy(100)
+                if near then
+                    local eh = near:FindFirstChild("HumanoidRootPart")
+                    if eh then
+                        h.CFrame = CFrame.new(eh.Position + Vector3.new(0, _G.FarmHeight or 14, 0), eh.Position)
+                        BringMobs(eh.Position)
+                        return
+                    end
+                end
+                local far = GetFarEnemy(40) or GetEnemy(12000)
+                if far then
+                    local eh = far:FindFirstChild("HumanoidRootPart")
+                    if eh then
+                        h.CFrame = CFrame.new(eh.Position + Vector3.new(0, 18, 0), eh.Position)
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+RunService.Stepped:Connect(function()
+    if not (_G.Noclip or _G.AutoFarm or _G.AutoRaid or _G.Fly or _G.PvPHead) then return end
+    pcall(function()
+        local c = LP.Character
+        if not c then return end
+        for _, p in pairs(c:GetDescendants()) do
+            if p:IsA("BasePart") then p.CanCollide = false end
+        end
+    end)
+end)
+
+RunService.RenderStepped:Connect(function()
+    if _G.Speed and not _G.AutoFarm and not _G.AutoRaid and not _G.PvPHead then
+        pcall(function()
+            local h = Hum()
+            if h then h.WalkSpeed = _G.WalkSpeed or 140 end
+        end)
+    end
+end)
+
+local wasFly = false
+RunService.RenderStepped:Connect(function()
+    if not _G.Fly then
+        if wasFly then
+            pcall(function()
+                local h = Hum()
+                if h then h.PlatformStand = false end
+            end)
+            wasFly = false
+        end
+        return
+    end
+    wasFly = true
+    pcall(function()
+        local hrp = HRP()
+        local hum = Hum()
+        if not hrp or not hum then return end
+        hum.PlatformStand = true
+        local cam = workspace.CurrentCamera
+        local dir = Vector3.new(0, 0, 0)
+        local spd = (_G.WalkSpeed or 140) * 0.5
+        if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.CFrame.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
+        if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
+        if UIS:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
+        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Vector3.new(0, 1, 0) end
+        if dir.Magnitude > 0 then
+            hrp.CFrame = hrp.CFrame + dir.Unit * spd * 0.05
+        end
+        hrp.Velocity = Vector3.new(0, 0, 0)
+    end)
+end)
+
+spawn(function()
+    while true do
+        task.wait(1.5)
+        if _G.FruitESP then
+            pcall(function()
+                for _, o in pairs(workspace:GetChildren()) do
+                    if o:IsA("Tool") and o:FindFirstChild("Handle") and string.find(string.lower(o.Name), "fruit") then
+                        if not o:FindFirstChild("DEKUzESP") then
+                            local bb = Instance.new("BillboardGui")
+                            bb.Name = "DEKUzESP"
+                            bb.Size = UDim2.new(0, 100, 0, 24)
+                            bb.AlwaysOnTop = true
+                            bb.Adornee = o.Handle
+                            bb.Parent = o
+                            local t = Instance.new("TextLabel")
+                            t.Size = UDim2.new(1, 0, 1, 0)
+                            t.BackgroundTransparency = 1
+                            t.Text = o.Name
+                            t.TextColor3 = Color3.fromRGB(100, 200, 255)
+                            t.Font = Enum.Font.GothamBold
+                            t.TextSize = 11
+                            t.Parent = bb
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+spawn(function()
+    while true do
+        task.wait(0.5)
+        if _G.BringFruit then
+            pcall(function()
+                local h = HRP()
+                if not h then return end
+                for _, o in pairs(workspace:GetChildren()) do
+                    if o:IsA("Tool") and o:FindFirstChild("Handle") and string.find(string.lower(o.Name), "fruit") then
+                        o.Handle.CFrame = h.CFrame
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+spawn(function()
+    while true do
+        task.wait(60)
+        if _G.AntiAFK then
+            pcall(function()
+                VU:CaptureController()
+                VU:ClickButton2(Vector2.new())
+            end)
+        end
+    end
+end)
+
+print("[DEKUz] โหลดสำเร็จ")
