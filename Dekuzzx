@@ -1,0 +1,946 @@
+--[[
+    Dekuz | BF Farm FULL
+    H7.5 · Magnitude กว้าง · ตีล้วน · Tween 0.25
+    ไม่ใช้ \~= · LeftAlt = UI
+]]
+
+repeat task.wait() until game:IsLoaded()
+
+local DKLogo = "rbxassetid://79388793482159"
+local Players = game:GetService("Players")
+local RS = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local LP = Players.LocalPlayer
+repeat task.wait() until LP
+
+local VIM
+pcall(function() VIM = game:GetService("VirtualInputManager") end)
+
+local okLib, Compkiller = pcall(function()
+    return loadstring(game:HttpGet(
+        "https://raw.githubusercontent.com/4lpaca-pin/CompKiller/refs/heads/main/src/source.luau"
+    ))()
+end)
+if not okLib or not Compkiller then
+    warn("[DK] CompKiller load failed")
+    return
+end
+
+local Notifier = Compkiller.newNotify()
+local ConfigManager = Compkiller:ConfigManager({
+    Directory = "Dekuz-BF",
+    Config = "Main",
+})
+
+pcall(function() Compkiller:Loader(DKLogo, 0.6).yield() end)
+
+local Window = Compkiller.new({
+    Name = "Dekuz",
+    Keybind = "LeftAlt",
+    Logo = DKLogo,
+    Scale = Compkiller.Scale.Window,
+    TextSize = 14,
+})
+
+pcall(function()
+    Compkiller:SetTheme("Dark Blue")
+    local C = Compkiller.Colors
+    C.Highlight = Color3.fromRGB(70, 160, 255)
+    C.Toggle = Color3.fromRGB(50, 140, 255)
+    C.BGDBColor = Color3.fromRGB(12, 18, 36)
+    Compkiller:RefreshCurrentColor()
+end)
+
+local FLOAT_HEIGHT = 7.5
+local HITBOX = 450
+local FARM_SPEED = 0.03
+local DETECT_RANGE = 25000
+local BRING_RANGE = 800
+local islandGoal = nil
+local islandArriveDist = 28
+
+local FLOAT_TWEEN_TIME = 0.25
+local ISLAND_TWEEN_TIME = 0.25
+local floatTween = nil
+local islandTween = nil
+local lastFloatPos = nil
+local lastAttack = 0
+
+local State = {
+    SelectWeapon = "None",
+    SelectMon = nil,
+    AutoEquip = false,
+    AutoFarmLevel = false,
+    AutoFarmMon = false,
+    BringMob = false,
+    AutoIsland = true,
+}
+
+local AC = nil
+local noMobTimer = 0
+local lastLv = 0
+
+-------------------------------------------------
+-- QUEST
+-------------------------------------------------
+local QuestData = {
+    { mon = "Grand Devotee", quest = "SubmergedQuest3", questId = 2 },
+    { mon = "High Disciple", quest = "SubmergedQuest3", questId = 1 },
+    { mon = "Ocean Prophet", quest = "SubmergedQuest2", questId = 2 },
+    { mon = "Sea Chanter", quest = "SubmergedQuest2", questId = 1 },
+    { mon = "Coral Pirate", quest = "SubmergedQuest1", questId = 2 },
+    { mon = "Reef Bandit", quest = "SubmergedQuest1", questId = 1 },
+    { mon = "Skulls Slayer", quest = "TikiQuest3", questId = 2 },
+    { mon = "Serpent Hunter", quest = "TikiQuest3", questId = 1 },
+    { mon = "Isle Champion", quest = "TikiQuest2", questId = 2 },
+    { mon = "Sun-kissed Warrior", quest = "TikiQuest2", questId = 1 },
+    { mon = "Island Boy", quest = "TikiQuest1", questId = 2 },
+    { mon = "Isle Outlaw", quest = "TikiQuest1", questId = 1 },
+    { mon = "Snow Demon", quest = "CandyCaneQuest", questId = 2 },
+    { mon = "Candy Pirate", quest = "CandyCaneQuest", questId = 1 },
+    { mon = "Candy Rebel", quest = "ChocolateQuest2", questId = 2 },
+    { mon = "Sweet Thief", quest = "ChocolateQuest2", questId = 1 },
+    { mon = "Chocolate Bar Battler", quest = "ChocolateQuest1", questId = 2 },
+    { mon = "Cocoa Warrior", quest = "ChocolateQuest1", questId = 1 },
+    { mon = "Head Baker", quest = "CakeQuest2", questId = 2 },
+    { mon = "Baking Staff", quest = "CakeQuest2", questId = 1 },
+    { mon = "Cake Guard", quest = "CakeQuest1", questId = 2 },
+    { mon = "Cookie Crafter", quest = "CakeQuest1", questId = 1 },
+    { mon = "Ice Cream Commander", quest = "IceCreamQuest", questId = 2 },
+    { mon = "Ice Cream Chef", quest = "IceCreamQuest", questId = 1 },
+    { mon = "Peanut President", quest = "PeanutQuest", questId = 2 },
+    { mon = "Peanut Scout", quest = "PeanutQuest", questId = 1 },
+    { mon = "Demonic Soul", quest = "HauntedQuest2", questId = 1 },
+    { mon = "Living Zombie", quest = "HauntedQuest1", questId = 2 },
+    { mon = "Reborn Skeleton", quest = "HauntedQuest1", questId = 1 },
+    { mon = "Musketeer Pirate", quest = "DeepForestArea2", questId = 2 },
+    { mon = "Jungle Pirate", quest = "DeepForestArea2", questId = 1 },
+    { mon = "Mythological Pirate", quest = "DeepForestQuest", questId = 2 },
+    { mon = "Forest Pirate", quest = "DeepForestQuest", questId = 1 },
+    { mon = "Fishman Captain", quest = "TurtleAdventureQuest", questId = 2 },
+    { mon = "Fishman Raider", quest = "TurtleAdventureQuest", questId = 1 },
+    { mon = "Marine Rear Admiral", quest = "MarineTreeQuest", questId = 2 },
+    { mon = "Marine Commodore", quest = "MarineTreeQuest", questId = 1 },
+    { mon = "Venomous Assailant", quest = "HydraTownQuest", questId = 2 },
+    { mon = "Hydra Enforcer", quest = "HydraTownQuest", questId = 1 },
+    { mon = "Dragon Crew Archer", quest = "DragonCrewQuest", questId = 2 },
+    { mon = "Dragon Crew Warrior", quest = "DragonCrewQuest", questId = 1 },
+    { mon = "Pistol Billionaire", quest = "PiratePortQuest", questId = 2 },
+    { mon = "Pirate Millionaire", quest = "PiratePortQuest", questId = 1 },
+    { mon = "Water Fighter", quest = "ForgottenQuest", questId = 2 },
+    { mon = "Sea Soldier", quest = "ForgottenQuest", questId = 1 },
+    { mon = "Snow Lurker", quest = "FrostQuest", questId = 2 },
+    { mon = "Arctic Warrior", quest = "FrostQuest", questId = 1 },
+    { mon = "Ship Officer", quest = "FrontCrewQuest", questId = 2 },
+    { mon = "Ship Steward", quest = "FrontCrewQuest", questId = 1 },
+    { mon = "Ship Engineer", quest = "RearCrewQuest", questId = 2 },
+    { mon = "Ship Deckhand", quest = "RearCrewQuest", questId = 1 },
+    { mon = "Lava Pirate", quest = "FireQuest", questId = 2 },
+    { mon = "Magma Ninja", quest = "FireQuest", questId = 1 },
+    { mon = "Horned Warrior", quest = "IceQuest", questId = 2 },
+    { mon = "Lab Subordinate", quest = "IceQuest", questId = 1 },
+    { mon = "Winter Warrior", quest = "SnowQuest2", questId = 2 },
+    { mon = "Snow Trooper", quest = "SnowQuest2", questId = 1 },
+    { mon = "Vampire", quest = "GraveyardQuest", questId = 2 },
+    { mon = "Zombie", quest = "GraveyardQuest", questId = 1 },
+    { mon = "Marine Captain", quest = "MarineQuest2", questId = 2 },
+    { mon = "Marine Lieutenant", quest = "MarineQuest2", questId = 1 },
+    { mon = "Factory Staff", quest = "Area2Quest", questId = 2 },
+    { mon = "Swan Pirate", quest = "Area2Quest", questId = 1 },
+    { mon = "Mercenary", quest = "Area1Quest", questId = 2 },
+    { mon = "Raider", quest = "Area1Quest", questId = 1 },
+    { mon = "Galley Captain", quest = "FountainQuest", questId = 2 },
+    { mon = "Galley Pirate", quest = "FountainQuest", questId = 1 },
+    { mon = "Royal Soldier", quest = "SkyQuest2", questId = 3 },
+    { mon = "Royal Squad", quest = "SkyQuest2", questId = 2 },
+    { mon = "Wysper", quest = "SkyQuest2", questId = 1 },
+    { mon = "Shanda", quest = "SkyQuest2", questId = 0 },
+    { mon = "God's Guard", quest = "SkyQuest", questId = 1 },
+    { mon = "Fishman Commando", quest = "FishmanQuest", questId = 2 },
+    { mon = "Fishman Warrior", quest = "FishmanQuest", questId = 1 },
+    { mon = "Military Spy", quest = "MarineQuest3", questId = 2 },
+    { mon = "Military Soldier", quest = "MarineQuest3", questId = 1 },
+    { mon = "Gladiator", quest = "ColosseumQuest", questId = 2 },
+    { mon = "Toga Warrior", quest = "ColosseumQuest", questId = 1 },
+    { mon = "Dangerous Prisoner", quest = "ImpelQuest", questId = 2 },
+    { mon = "Prisoner", quest = "ImpelQuest", questId = 1 },
+    { mon = "Dark Master", quest = "SkyQuest", questId = 2 },
+    { mon = "Sky Bandit", quest = "SkyQuest", questId = 1 },
+    { mon = "Chief Petty Officer", quest = "MarineQuest", questId = 1 },
+    { mon = "Snowman", quest = "SnowQuest", questId = 2 },
+    { mon = "Snow Bandit", quest = "SnowQuest", questId = 1 },
+    { mon = "Desert Officer", quest = "DesertQuest", questId = 2 },
+    { mon = "Desert Bandit", quest = "DesertQuest", questId = 1 },
+    { mon = "Brute", quest = "BuggyQuest1", questId = 2 },
+    { mon = "Pirate", quest = "BuggyQuest1", questId = 1 },
+    { mon = "Gorilla", quest = "JungleQuest", questId = 2 },
+    { mon = "Monkey", quest = "JungleQuest", questId = 1 },
+    { mon = "Bandit", quest = "BanditQuest1", questId = 1 },
+}
+
+-------------------------------------------------
+-- FARM AREAS
+-------------------------------------------------
+local FarmAreas = {
+    { MinLevel = 0, MaxLevel = 9, Mob = "Bandit", Position = CFrame.new(1060.42, 16.42, 1553.32) },
+    { MinLevel = 10, MaxLevel = 14, Mob = "Monkey", Position = CFrame.new(-1595.69, 36.91, 155.41) },
+    { MinLevel = 15, MaxLevel = 29, Mob = "Gorilla", Position = CFrame.new(-1254.21, 6.34, -512.82) },
+    { MinLevel = 30, MaxLevel = 39, Mob = "Pirate", Position = CFrame.new(-1140.98, 8.82, 3830.35) },
+    { MinLevel = 40, MaxLevel = 59, Mob = "Brute", Position = CFrame.new(-1140.98, 8.82, 3830.35) },
+    { MinLevel = 60, MaxLevel = 74, Mob = "Desert Bandit", Position = CFrame.new(893.29, 6.50, 4403.49) },
+    { MinLevel = 75, MaxLevel = 89, Mob = "Desert Officer", Position = CFrame.new(893.29, 6.50, 4403.49) },
+    { MinLevel = 90, MaxLevel = 99, Mob = "Snow Bandit", Position = CFrame.new(1375.16, 85.35, -1298.30) },
+    { MinLevel = 100, MaxLevel = 119, Mob = "Snowman", Position = CFrame.new(1375.16, 85.35, -1298.30) },
+    { MinLevel = 120, MaxLevel = 149, Mob = "Chief Petty Officer", Position = CFrame.new(-5037.75, 28.71, 4328.46) },
+    { MinLevel = 150, MaxLevel = 174, Mob = "Sky Bandit", Position = CFrame.new(-4838.65, 717.73, -2622.25) },
+    { MinLevel = 175, MaxLevel = 189, Mob = "Dark Master", Position = CFrame.new(-5259.87, 388.71, -2289.59) },
+    { MinLevel = 190, MaxLevel = 209, Mob = "Prisoner", Position = CFrame.new(5194.05, 3.59, 687.30) },
+    { MinLevel = 210, MaxLevel = 249, Mob = "Dangerous Prisoner", Position = CFrame.new(5194.05, 3.59, 687.30) },
+    { MinLevel = 250, MaxLevel = 274, Mob = "Toga Warrior", Position = CFrame.new(-1577.37, 7.45, -2984.59) },
+    { MinLevel = 275, MaxLevel = 299, Mob = "Gladiator", Position = CFrame.new(-1577.37, 7.45, -2984.59) },
+    { MinLevel = 300, MaxLevel = 324, Mob = "Military Soldier", Position = CFrame.new(-5316.34, 12.30, 8516.33) },
+    { MinLevel = 325, MaxLevel = 374, Mob = "Military Spy", Position = CFrame.new(-5862.27, 77.31, 8850.19) },
+    { MinLevel = 375, MaxLevel = 399, Mob = "Fishman Warrior", Position = CFrame.new(60859.10, 28.54, 1434.35) },
+    { MinLevel = 400, MaxLevel = 449, Mob = "Fishman Commando", Position = CFrame.new(61903.08, 18.77, 1449.42) },
+    { MinLevel = 450, MaxLevel = 474, Mob = "God's Guard", Position = CFrame.new(-4691.65, 853.94, -1876.19) },
+    { MinLevel = 475, MaxLevel = 499, Mob = "Shanda", Position = CFrame.new(-7861.42, 5545.78, -379.03) },
+    { MinLevel = 500, MaxLevel = 524, Mob = "Wysper", Position = CFrame.new(-7668.31, 5609.76, -1435.78) },
+    { MinLevel = 525, MaxLevel = 549, Mob = "Royal Squad", Position = CFrame.new(-7819.32, 5631.67, -1746.44) },
+    { MinLevel = 550, MaxLevel = 624, Mob = "Royal Soldier", Position = CFrame.new(-7819.32, 5631.67, -1746.44) },
+    { MinLevel = 625, MaxLevel = 649, Mob = "Galley Pirate", Position = CFrame.new(5636.71, 45.71, 4002.28) },
+    { MinLevel = 650, MaxLevel = 699, Mob = "Galley Captain", Position = CFrame.new(5650.59, 38.56, 4925.73) },
+    { MinLevel = 700, MaxLevel = 724, Mob = "Raider", Position = CFrame.new(-427.79, 73.03, 1837.69) },
+    { MinLevel = 725, MaxLevel = 774, Mob = "Mercenary", Position = CFrame.new(-427.79, 73.03, 1837.69) },
+    { MinLevel = 775, MaxLevel = 799, Mob = "Swan Pirate", Position = CFrame.new(636.28, 73.13, 916.57) },
+    { MinLevel = 800, MaxLevel = 874, Mob = "Factory Staff", Position = CFrame.new(256.73, 73.02, -126.21) },
+    { MinLevel = 875, MaxLevel = 899, Mob = "Marine Lieutenant", Position = CFrame.new(-2438.39, 73.07, -3217.44) },
+    { MinLevel = 900, MaxLevel = 949, Mob = "Marine Captain", Position = CFrame.new(-2438.39, 73.07, -3217.44) },
+    { MinLevel = 950, MaxLevel = 974, Mob = "Zombie", Position = CFrame.new(-5492.98, 48.54, -800.90) },
+    { MinLevel = 975, MaxLevel = 999, Mob = "Vampire", Position = CFrame.new(-5492.98, 48.54, -800.90) },
+    { MinLevel = 1000, MaxLevel = 1049, Mob = "Snow Trooper", Position = CFrame.new(607.43, 401.48, -5373.41) },
+    { MinLevel = 1050, MaxLevel = 1099, Mob = "Winter Warrior", Position = CFrame.new(607.43, 401.48, -5373.41) },
+    { MinLevel = 1100, MaxLevel = 1124, Mob = "Lab Subordinate", Position = CFrame.new(-6228.61, 81.88, -4852.40) },
+    { MinLevel = 1125, MaxLevel = 1174, Mob = "Horned Warrior", Position = CFrame.new(-6228.61, 81.88, -4852.40) },
+    { MinLevel = 1175, MaxLevel = 1199, Mob = "Magma Ninja", Position = CFrame.new(-5404.57, 29.22, -5376.35) },
+    { MinLevel = 1200, MaxLevel = 1249, Mob = "Lava Pirate", Position = CFrame.new(-5404.57, 29.22, -5376.35) },
+    { MinLevel = 1250, MaxLevel = 1274, Mob = "Ship Deckhand", Position = CFrame.new(1032.45, 125.25, 32908.30) },
+    { MinLevel = 1275, MaxLevel = 1299, Mob = "Ship Engineer", Position = CFrame.new(1032.45, 125.25, 32908.30) },
+    { MinLevel = 1300, MaxLevel = 1324, Mob = "Ship Steward", Position = CFrame.new(971.81, 125.11, 33251.86) },
+    { MinLevel = 1325, MaxLevel = 1349, Mob = "Ship Officer", Position = CFrame.new(971.81, 125.11, 33251.86) },
+    { MinLevel = 1350, MaxLevel = 1374, Mob = "Arctic Warrior", Position = CFrame.new(5666.19, 28.23, -6486.86) },
+    { MinLevel = 1375, MaxLevel = 1424, Mob = "Snow Lurker", Position = CFrame.new(5666.19, 28.23, -6486.86) },
+    { MinLevel = 1425, MaxLevel = 1449, Mob = "Sea Soldier", Position = CFrame.new(-3053.93, 239.84, -10139.88) },
+    { MinLevel = 1450, MaxLevel = 1499, Mob = "Water Fighter", Position = CFrame.new(-3053.93, 239.84, -10139.88) },
+    { MinLevel = 1500, MaxLevel = 1524, Mob = "Pirate Millionaire", Position = CFrame.new(-449.24, 106.88, 5944.87) },
+    { MinLevel = 1525, MaxLevel = 1574, Mob = "Pistol Billionaire", Position = CFrame.new(-449.24, 106.88, 5944.87) },
+    { MinLevel = 1575, MaxLevel = 1599, Mob = "Dragon Crew Warrior", Position = CFrame.new(6738.42, 127.43, -710.21) },
+    { MinLevel = 1600, MaxLevel = 1624, Mob = "Dragon Crew Archer", Position = CFrame.new(6738.42, 127.43, -710.21) },
+    { MinLevel = 1625, MaxLevel = 1699, Mob = "Hydra Enforcer", Position = CFrame.new(5228.12, 1003.19, 758.25) },
+    { MinLevel = 1650, MaxLevel = 1699, Mob = "Venomous Assailant", Position = CFrame.new(5228.12, 1003.19, 758.25) },
+    { MinLevel = 1700, MaxLevel = 1724, Mob = "Marine Commodore", Position = CFrame.new(2484.22, 74.61, -6792.02) },
+    { MinLevel = 1725, MaxLevel = 1774, Mob = "Marine Rear Admiral", Position = CFrame.new(2484.22, 74.61, -6792.02) },
+    { MinLevel = 1775, MaxLevel = 1799, Mob = "Fishman Raider", Position = CFrame.new(-10569.38, 332.26, -8751.03) },
+    { MinLevel = 1800, MaxLevel = 1824, Mob = "Fishman Captain", Position = CFrame.new(-10569.38, 332.26, -8751.03) },
+    { MinLevel = 1825, MaxLevel = 1849, Mob = "Forest Pirate", Position = CFrame.new(-13234.69, 332.71, -7628.22) },
+    { MinLevel = 1850, MaxLevel = 1899, Mob = "Mythological Pirate", Position = CFrame.new(-13234.69, 332.71, -7628.22) },
+    { MinLevel = 1900, MaxLevel = 1924, Mob = "Jungle Pirate", Position = CFrame.new(-12680.09, 391.05, -9905.41) },
+    { MinLevel = 1925, MaxLevel = 1974, Mob = "Musketeer Pirate", Position = CFrame.new(-12680.09, 391.05, -9905.41) },
+    { MinLevel = 1975, MaxLevel = 1999, Mob = "Reborn Skeleton", Position = CFrame.new(-9478.08, 145.22, 5560.11) },
+    { MinLevel = 2000, MaxLevel = 2024, Mob = "Living Zombie", Position = CFrame.new(-9478.08, 145.22, 5560.11) },
+    { MinLevel = 2025, MaxLevel = 2074, Mob = "Demonic Soul", Position = CFrame.new(-9507.37, 175.59, 6071.50) },
+    { MinLevel = 2075, MaxLevel = 2099, Mob = "Peanut Scout", Position = CFrame.new(-2108.28, 38.40, -10200.50) },
+    { MinLevel = 2100, MaxLevel = 2124, Mob = "Peanut President", Position = CFrame.new(-2108.28, 38.40, -10200.50) },
+    { MinLevel = 2125, MaxLevel = 2149, Mob = "Ice Cream Chef", Position = CFrame.new(-822.47, 66.18, -10965.58) },
+    { MinLevel = 2150, MaxLevel = 2199, Mob = "Ice Cream Commander", Position = CFrame.new(-822.47, 66.18, -10965.58) },
+    { MinLevel = 2200, MaxLevel = 2224, Mob = "Cookie Crafter", Position = CFrame.new(-2023.41, 37.80, -12037.74) },
+    { MinLevel = 2225, MaxLevel = 2249, Mob = "Cake Guard", Position = CFrame.new(-2023.41, 37.80, -12037.74) },
+    { MinLevel = 2250, MaxLevel = 2274, Mob = "Baking Staff", Position = CFrame.new(-1925.39, 37.86, -12838.44) },
+    { MinLevel = 2275, MaxLevel = 2299, Mob = "Head Baker", Position = CFrame.new(-1925.39, 37.86, -12838.44) },
+    { MinLevel = 2300, MaxLevel = 2324, Mob = "Cocoa Warrior", Position = CFrame.new(235.22, 30.08, -12206.11) },
+    { MinLevel = 2325, MaxLevel = 2349, Mob = "Chocolate Bar Battler", Position = CFrame.new(235.22, 30.08, -12206.11) },
+    { MinLevel = 2350, MaxLevel = 2374, Mob = "Sweet Thief", Position = CFrame.new(152.81, 24.85, -12776.63) },
+    { MinLevel = 2375, MaxLevel = 2399, Mob = "Candy Rebel", Position = CFrame.new(152.81, 24.85, -12776.63) },
+    { MinLevel = 2400, MaxLevel = 2424, Mob = "Candy Pirate", Position = CFrame.new(-1150.31, 64.73, -14497.68) },
+    { MinLevel = 2425, MaxLevel = 2449, Mob = "Snow Demon", Position = CFrame.new(-1150.31, 64.73, -14497.68) },
+    { MinLevel = 2450, MaxLevel = 2474, Mob = "Isle Outlaw", Position = CFrame.new(-16551.28, 54.50, -160.14) },
+    { MinLevel = 2475, MaxLevel = 2499, Mob = "Island Boy", Position = CFrame.new(-16551.28, 54.50, -160.14) },
+    { MinLevel = 2500, MaxLevel = 2524, Mob = "Sun-kissed Warrior", Position = CFrame.new(-16537.99, 55.75, 1051.91) },
+    { MinLevel = 2525, MaxLevel = 2549, Mob = "Isle Champion", Position = CFrame.new(-16537.99, 55.75, 1051.91) },
+    { MinLevel = 2550, MaxLevel = 2574, Mob = "Serpent Hunter", Position = CFrame.new(-16661.73, 114.05, 1577.72) },
+    { MinLevel = 2575, MaxLevel = 2599, Mob = "Skulls Slayer", Position = CFrame.new(-16661.73, 114.05, 1577.72) },
+    { MinLevel = 2600, MaxLevel = 2624, Mob = "Reef Bandit", Position = CFrame.new(10782.22, -2087.58, 9258.63) },
+    { MinLevel = 2625, MaxLevel = 2649, Mob = "Coral Pirate", Position = CFrame.new(10782.22, -2087.58, 9258.63) },
+    { MinLevel = 2650, MaxLevel = 2674, Mob = "Sea Chanter", Position = CFrame.new(10887.91, -2086.00, 10033.34) },
+    { MinLevel = 2675, MaxLevel = 2699, Mob = "Ocean Prophet", Position = CFrame.new(10887.91, -2086.00, 10033.34) },
+    { MinLevel = 2700, MaxLevel = 2724, Mob = "High Disciple", Position = CFrame.new(9634.80, -1992.42, 9615.75) },
+    { MinLevel = 2725, MaxLevel = 9999, Mob = "Grand Devotee", Position = CFrame.new(9634.80, -1992.42, 9615.75) },
+}
+
+-------------------------------------------------
+-- HELPERS
+-------------------------------------------------
+local function Char()
+    return LP.Character
+end
+
+local function Hum()
+    local c = Char()
+    return c and c:FindFirstChildOfClass("Humanoid")
+end
+
+local function HRP()
+    local c = Char()
+    return c and c:FindFirstChild("HumanoidRootPart")
+end
+
+local function GetLevel()
+    local ok, v = pcall(function()
+        return LP.Data.Level.Value
+    end)
+    return ok and v or 0
+end
+
+local function CommF_(...)
+    local a = { ... }
+    return pcall(function()
+        return RS:WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(a))
+    end)
+end
+
+local function EquipTool(name)
+    if not name or name == "None" then return end
+    pcall(function()
+        local hum = Hum()
+        local char = Char()
+        if not hum or not char then return end
+        if char:FindFirstChild(name) then return end
+        local bag = LP:FindFirstChild("Backpack")
+        if not bag then return end
+        local t = bag:FindFirstChild(name)
+        if t and t:IsA("Tool") then
+            hum:EquipTool(t)
+        end
+    end)
+end
+
+local function GetArea()
+    local lv = GetLevel()
+    for _, a in ipairs(FarmAreas) do
+        if lv >= a.MinLevel and lv <= a.MaxLevel then
+            return a
+        end
+    end
+    return FarmAreas[#FarmAreas]
+end
+
+local function cancelTween(t)
+    if t then
+        pcall(function() t:Cancel() end)
+    end
+end
+
+local function SetIslandGoal(cf)
+    if cf then
+        islandGoal = cf.Position + Vector3.new(0, 8, 0)
+        cancelTween(islandTween)
+        islandTween = nil
+    end
+end
+
+local function freezeHum()
+    local hum = Hum()
+    if hum then
+        hum.WalkSpeed = 0
+        hum.JumpPower = 0
+        hum.AutoRotate = false
+    end
+end
+
+local function zeroVel(h)
+    pcall(function()
+        h.AssemblyLinearVelocity = Vector3.zero
+        h.AssemblyAngularVelocity = Vector3.zero
+    end)
+end
+
+local function FlyToIsland()
+    local h = HRP()
+    if not h or not islandGoal then return true end
+
+    local cur = h.Position
+    local dist = (islandGoal - cur).Magnitude
+
+    if dist < islandArriveDist then
+        islandGoal = nil
+        cancelTween(islandTween)
+        islandTween = nil
+        return true
+    end
+
+    if islandTween and islandTween.PlaybackState == Enum.PlaybackState.Playing then
+        zeroVel(h)
+        freezeHum()
+        return false
+    end
+
+    local maxStep = 26
+    if dist > 400 then
+        maxStep = 38
+    elseif dist > 150 then
+        maxStep = 32
+    end
+
+    local dir = (islandGoal - cur).Unit
+    local targetPos = cur + dir * math.min(maxStep, dist)
+    local look = CFrame.lookAt(targetPos, islandGoal)
+
+    cancelTween(islandTween)
+    islandTween = TweenService:Create(
+        h,
+        TweenInfo.new(ISLAND_TWEEN_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        { CFrame = look }
+    )
+    islandTween:Play()
+    zeroVel(h)
+    freezeHum()
+    return false
+end
+
+local function FindMob(name, range)
+    if not name then return nil end
+    range = range or DETECT_RANGE
+    local h = HRP()
+    if not h then return nil end
+    local best = nil
+    local bestD = range
+
+    local function consider(m)
+        if not m or not m:IsA("Model") then return end
+        if m.Name == name then
+            local hum = m:FindFirstChildOfClass("Humanoid")
+            local root = m:FindFirstChild("HumanoidRootPart")
+            if hum and root and hum.Health > 0 then
+                local d = (h.Position - root.Position).Magnitude
+                if d < bestD then
+                    best = m
+                    bestD = d
+                end
+            end
+        end
+    end
+
+    pcall(function()
+        local folder = workspace:FindFirstChild("Enemies")
+        if folder then
+            for _, m in ipairs(folder:GetChildren()) do
+                consider(m)
+            end
+        end
+    end)
+    return best
+end
+
+local function BringSameName(name)
+    if not State.BringMob or not name then return end
+    local h = HRP()
+    if not h then return end
+    local target = FindMob(name, DETECT_RANGE)
+    local pivot = target and target:FindFirstChild("HumanoidRootPart")
+    local base = pivot and pivot.CFrame or (h.CFrame * CFrame.new(0, 0, -6))
+
+    pcall(function()
+        local folder = workspace:FindFirstChild("Enemies")
+        if not folder then return end
+        local n = 0
+        for _, m in ipairs(folder:GetChildren()) do
+            if m.Name == name and m:IsA("Model") then
+                local hum = m:FindFirstChildOfClass("Humanoid")
+                local root = m:FindFirstChild("HumanoidRootPart")
+                if hum and root and hum.Health > 0 then
+                    local d = (h.Position - root.Position).Magnitude
+                    if d < BRING_RANGE then
+                        root.CFrame = base * CFrame.new((n % 4) * 2.2, 0, math.floor(n / 4) * 2.2)
+                        pcall(function()
+                            root.AssemblyLinearVelocity = Vector3.zero
+                        end)
+                        n = n + 1
+                        if n > 10 then break end
+                    end
+                end
+            end
+        end
+    end)
+end
+
+local function LoadCombat()
+    pcall(function()
+        local ps = LP:FindFirstChild("PlayerScripts")
+        local cf = ps and ps:FindFirstChild("CombatFramework")
+        if cf then AC = require(cf) end
+    end)
+    pcall(function()
+        if AC and AC.activeController then return end
+        if type(getreg) == "function" then
+            for _, v in pairs(getreg()) do
+                if type(v) == "table" and rawget(v, "activeController") then
+                    AC = v
+                    break
+                end
+            end
+        end
+    end)
+end
+
+LoadCombat()
+LP.CharacterAdded:Connect(function()
+    task.wait(1.2)
+    AC = nil
+    cancelTween(floatTween)
+    cancelTween(islandTween)
+    floatTween = nil
+    islandTween = nil
+    islandGoal = nil
+    lastFloatPos = nil
+    LoadCombat()
+end)
+
+local function NoShake()
+    pcall(function()
+        local util = RS:FindFirstChild("Util")
+        local s = util and util:FindFirstChild("CameraShaker")
+        if s then
+            local m = require(s)
+            if m and m.Stop then m:Stop() end
+        end
+    end)
+end
+
+local function ApplyMagnitude(c)
+    if not c then return end
+    c.hitboxMagnitude = HITBOX
+    c.timeToNextAttack = 0
+    c.attacking = false
+    c.blocking = false
+    if type(c.increment) == "number" then c.increment = 4 end
+    if type(c.focusStart) == "number" then c.focusStart = 0 end
+end
+
+local function FloatTo(mob)
+    local h = HRP()
+    if not h or not mob then return end
+    local root = mob:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    local goal = root.Position + Vector3.new(0, FLOAT_HEIGHT, 0)
+    local cur = h.Position
+    local dist = (goal - cur).Magnitude
+    local lookTarget = root.Position + Vector3.new(0, 0.25, 0)
+
+    if dist < 3 then
+        cancelTween(floatTween)
+        floatTween = nil
+        h.CFrame = CFrame.lookAt(goal, lookTarget)
+        zeroVel(h)
+        freezeHum()
+        lastFloatPos = goal
+        return
+    end
+
+    if floatTween and floatTween.PlaybackState == Enum.PlaybackState.Playing then
+        if lastFloatPos and (lastFloatPos - goal).Magnitude < 5 then
+            zeroVel(h)
+            freezeHum()
+            return
+        end
+    end
+
+    local maxStep = 10
+    if dist > 100 then
+        maxStep = 20
+    elseif dist > 40 then
+        maxStep = 14
+    end
+
+    local dir = (goal - cur).Unit
+    local targetPos = cur + dir * math.min(maxStep, dist)
+    lastFloatPos = goal
+
+    local look = CFrame.lookAt(targetPos, lookTarget)
+
+    cancelTween(floatTween)
+    floatTween = TweenService:Create(
+        h,
+        TweenInfo.new(FLOAT_TWEEN_TIME, Enum.EasingStyle.Linear, Enum.EasingDirection.Out),
+        { CFrame = look }
+    )
+    floatTween:Play()
+    zeroVel(h)
+    freezeHum()
+end
+
+-- ตีล้วน: magnitude + attack + Activate เท่านั้น (ไม่พึ่ง VIM)
+local function DoM1()
+    local now = tick()
+    if now - lastAttack < 0.02 then return end
+    lastAttack = now
+
+    NoShake()
+    if State.SelectWeapon then EquipTool(State.SelectWeapon) end
+
+    pcall(function()
+        if not AC then LoadCombat() end
+        local c = AC and AC.activeController
+        if not c then return end
+        ApplyMagnitude(c)
+        if type(c.attack) == "function" then
+            c:attack()
+            ApplyMagnitude(c)
+            c:attack()
+        end
+    end)
+
+    pcall(function()
+        local tool = Char() and Char():FindFirstChildOfClass("Tool")
+        if tool then tool:Activate() end
+    end)
+end
+
+local function HasQuest()
+    local ok, vis = pcall(function()
+        return LP.PlayerGui.Main.Quest.Visible
+    end)
+    return ok and vis == true
+end
+
+local function TakeQuestForMob(mobName)
+    for _, q in ipairs(QuestData) do
+        if q.mon == mobName then
+            CommF_("StartQuest", q.quest, q.questId or 1)
+            return
+        end
+    end
+end
+
+-------------------------------------------------
+-- UI
+-------------------------------------------------
+Window:DrawCategory({ Name = "Farm" })
+local FarmTab = Window:DrawTab({
+    Name = "Main",
+    Icon = "swords",
+    Type = "Single",
+    EnableScrolling = true,
+})
+local Sec = FarmTab:DrawSection({ Name = "Combat" })
+
+local Weapon = { "None" }
+pcall(function()
+    local bag = LP:FindFirstChild("Backpack")
+    if bag then
+        for _, v in ipairs(bag:GetChildren()) do
+            if v:IsA("Tool") then
+                table.insert(Weapon, v.Name)
+            end
+        end
+    end
+end)
+
+Sec:AddDropdown({
+    Name = "Select Weapon",
+    Flag = "SelectWeapon",
+    Default = "None",
+    Values = Weapon,
+    Callback = function(v)
+        State.SelectWeapon = v
+    end,
+})
+
+Sec:AddToggle({
+    Name = "Auto Equip",
+    Flag = "AutoEquip",
+    Default = false,
+    Callback = function(v)
+        State.AutoEquip = v and true or false
+    end,
+})
+
+local MobList = {}
+for _, a in ipairs(FarmAreas) do
+    local dupe = false
+    for _, n in ipairs(MobList) do
+        if n == a.Mob then
+            dupe = true
+            break
+        end
+    end
+    if not dupe then
+        table.insert(MobList, a.Mob)
+    end
+end
+State.SelectMon = MobList[1]
+
+Sec:AddDropdown({
+    Name = "Select Mob",
+    Flag = "SelectMon",
+    Default = MobList[1],
+    Values = MobList,
+    Callback = function(v)
+        State.SelectMon = v
+    end,
+})
+
+Sec:AddToggle({
+    Name = "Auto Farm Level",
+    Flag = "AutoFarmLevel",
+    Default = false,
+    Callback = function(v)
+        State.AutoFarmLevel = v and true or false
+        noMobTimer = 0
+        islandGoal = nil
+        lastFloatPos = nil
+        cancelTween(floatTween)
+        cancelTween(islandTween)
+    end,
+})
+
+Sec:AddToggle({
+    Name = "Auto Farm Mon",
+    Flag = "AutoFarmMon",
+    Default = false,
+    Callback = function(v)
+        State.AutoFarmMon = v and true or false
+        noMobTimer = 0
+        islandGoal = nil
+        lastFloatPos = nil
+        cancelTween(floatTween)
+        cancelTween(islandTween)
+    end,
+})
+
+Sec:AddToggle({
+    Name = "Bring Mob (Same Name)",
+    Flag = "BringMob",
+    Default = false,
+    Callback = function(v)
+        State.BringMob = v and true or false
+    end,
+})
+
+Sec:AddToggle({
+    Name = "Auto Next Island",
+    Flag = "AutoIsland",
+    Default = true,
+    Callback = function(v)
+        State.AutoIsland = v and true or false
+    end,
+})
+
+Sec:AddParagraph({
+    Title = "DK",
+    Content = "H7.5 · Magnitude 450\nTween 0.25 · Attack only · LeftAlt",
+})
+
+Window:DrawCategory({ Name = "System" })
+local SetTab = Window:DrawTab({
+    Name = "Settings",
+    Icon = "settings-3",
+    Type = "Single",
+})
+SetTab:DrawSection({ Name = "UI" }):AddToggle({
+    Name = "Always Show",
+    Flag = "AlwaysShow",
+    Default = false,
+    Callback = function(v)
+        Window.AlwayShowTab = v
+    end,
+})
+
+pcall(function()
+    local cfg = Window:DrawConfig({
+        Name = "Config",
+        Icon = "folder",
+        Config = ConfigManager,
+    })
+    cfg:Init()
+end)
+
+-------------------------------------------------
+-- LOOPS
+-------------------------------------------------
+task.spawn(function()
+    while true do
+        task.wait(0.4)
+        if State.AutoEquip then
+            EquipTool(State.SelectWeapon)
+        end
+    end
+end)
+
+RunService.Stepped:Connect(function()
+    if not (State.AutoFarmLevel or State.AutoFarmMon) then return end
+    pcall(function()
+        local c = Char()
+        if not c then return end
+        for _, p in ipairs(c:GetDescendants()) do
+            if p:IsA("BasePart") then
+                p.CanCollide = false
+            end
+        end
+    end)
+end)
+
+task.spawn(function()
+    local was = false
+    while true do
+        task.wait(0.35)
+        local now = State.AutoFarmLevel or State.AutoFarmMon
+        if was and not now then
+            islandGoal = nil
+            lastFloatPos = nil
+            cancelTween(floatTween)
+            cancelTween(islandTween)
+            floatTween = nil
+            islandTween = nil
+            pcall(function()
+                local hum = Hum()
+                if hum then
+                    hum.AutoRotate = true
+                    hum.WalkSpeed = 16
+                    hum.JumpPower = 50
+                end
+            end)
+        end
+        was = now
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    if not (State.AutoFarmLevel or State.AutoFarmMon) then
+        islandGoal = nil
+        return
+    end
+    pcall(function()
+        local h = HRP()
+        if not h then return end
+
+        if islandGoal then
+            FlyToIsland()
+            return
+        end
+
+        local name = nil
+        local area = nil
+
+        if State.AutoFarmLevel then
+            area = GetArea()
+            name = area and area.Mob
+        else
+            name = State.SelectMon
+            for _, a in ipairs(FarmAreas) do
+                if a.Mob == name then
+                    area = a
+                    break
+                end
+            end
+        end
+
+        if not name then return end
+
+        local mob = FindMob(name, DETECT_RANGE)
+
+        if State.AutoIsland and area and area.Position then
+            if not mob then
+                noMobTimer = noMobTimer + 0.016
+                if noMobTimer > 1.5 then
+                    SetIslandGoal(area.Position)
+                    noMobTimer = 0
+                end
+            else
+                noMobTimer = 0
+            end
+        end
+
+        if mob then
+            FloatTo(mob)
+            if State.BringMob then
+                BringSameName(name)
+            end
+        end
+    end)
+end)
+
+task.spawn(function()
+    while true do
+        if not (State.AutoFarmLevel or State.AutoFarmMon) or islandGoal then
+            task.wait(0.08)
+        else
+            pcall(function()
+                local name = nil
+                if State.AutoFarmLevel then
+                    local area = GetArea()
+                    name = area and area.Mob
+                    if name and not HasQuest() then
+                        TakeQuestForMob(name)
+                        task.wait(0.25)
+                    end
+                else
+                    name = State.SelectMon
+                end
+                if name and FindMob(name, DETECT_RANGE) then
+                    DoM1()
+                end
+            end)
+            task.wait(FARM_SPEED)
+        end
+    end
+end)
+
+-- ขยาย magnitude + ตัด CD ทุกเฟรม (ตีล้วน)
+RunService.RenderStepped:Connect(function()
+    if not (State.AutoFarmLevel or State.AutoFarmMon) then return end
+    if islandGoal then return end
+    NoShake()
+    pcall(function()
+        if not AC then return end
+        ApplyMagnitude(AC.activeController)
+    end)
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(60)
+        pcall(function()
+            local VU = game:GetService("VirtualUser")
+            VU:CaptureController()
+            VU:ClickButton2(Vector2.new())
+        end)
+    end
+end)
+
+lastLv = GetLevel()
+task.spawn(function()
+    while true do
+        task.wait(2)
+        local lv = GetLevel()
+        if lv == lastLv then
+        else
+            if State.AutoIsland and (State.AutoFarmLevel or State.AutoFarmMon) then
+                local area = GetArea()
+                if area and area.Position then
+                    SetIslandGoal(area.Position)
+                end
+            end
+            lastLv = lv
+        end
+    end
+end)
+
+Notifier.new({
+    Title = "DK",
+    Content = "H7.5 · Magnitude 450 · Tween 0.25",
+    Duration = 5,
+    Icon = DKLogo,
+})
+
+print("[DK] H7.5 · Magnitude 450 · Tween 0.25 · Attack only")
